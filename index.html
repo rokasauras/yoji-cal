@@ -38,6 +38,14 @@
       font-weight: bold;
       color: #cc0000;
     }
+
+    /* Ensures the image fits neatly within .calculator’s width */
+    .pricing-table-img {
+      display: block;
+      max-width: 100%;
+      height: auto;
+      margin: 20px auto 0;
+    }
   </style>
 </head>
 <body>
@@ -66,6 +74,13 @@
 
   <h3>Total Monthly Price: <span id="price">£0</span></h3>
   <div id="helpMessage" class="help-msg" style="display:none;"></div>
+
+  <!-- Updated image reference: same directory, same repository -->
+  <img 
+    src="yoji_pricing_table.png" 
+    alt="Yoji Pricing Table" 
+    class="pricing-table-img" 
+  />
 </div>
 
 <script>
@@ -93,13 +108,11 @@ function calculate() {
     2: {
       1: 141, // 1 Yoji + 2 older
       2: 154, // 2 Yoji + 2 older
-      // 3 Yoji + 2 older => not listed => “Get further help”
     },
     3: {
       1: 163, // 1 Yoji + 3 older
-      // 2 or 3 Yoji + 3 older => not listed => “Get further help”
-    },
-    // 4 older => not explicitly listed for mixing => “Get further help”
+    }
+    // 4 older => not explicitly listed => “Get further help”
   };
 
   // Clear any help message and price from previous run
@@ -124,28 +137,23 @@ function calculate() {
   }
   // Case B: FTD-only (no Yoji)
   else if (adultsVal > 0 && yojiVal === 0) {
-    // 4 => index 4 in the array => 4+ is valid for older only
     totalPrice = ftdPricing[adultsVal];
   }
   // Case C: Yoji-only (no 5+)
   else if (adultsVal === 0 && yojiVal > 0) {
-    // 4 => index 4 => 4+ is valid for Yoji-only
     totalPrice = yojiPricing[yojiVal];
   }
   // Case D: Mixed (adultsVal > 0 && yojiVal > 0)
   else {
-    // 4+ older in a mixed scenario isn’t in the table => must show “Get further help”
+    // 4+ older in a mixed scenario => must show “Get further help”
     if (adultsVal === 4) {
       totalPrice = null;
-    } 
-    else {
-      // See if there's a mixedPricing entry for the chosen # older
+    } else {
       const olderGroup = mixedPricing[adultsVal];
       if (!olderGroup) {
-        // e.g. if adultsVal is 4, or other edge case => no table entry
         totalPrice = null;
       } else {
-        // 4+ Yoji in a mixed scenario => not in the table => help
+        // 4+ Yoji => not in table => help
         if (yojiVal === 4) {
           totalPrice = null;
         } else {
@@ -156,7 +164,7 @@ function calculate() {
     }
   }
 
-  // Display results
+  // Display results or prompt “Get further help”
   if (totalPrice === null) {
     showHelp();
   } else {
