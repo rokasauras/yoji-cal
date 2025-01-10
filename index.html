@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Yoji Pricing Calculator</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 20px;
+    }
+    .calculator {
+      max-width: 400px;
+      margin: auto;
+      padding: 20px;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+      background: #f9f9f9;
+    }
+    input, select, button {
+      width: 100%;
+      margin-bottom: 10px;
+      padding: 10px;
+      border: 1px solid #ccc;
+      border-radius: 3px;
+    }
+    button {
+      background: #007bff;
+      color: white;
+      border: none;
+      cursor: pointer;
+    }
+    button:hover {
+      background: #0056b3;
+    }
+    .help-msg {
+      margin-top: 10px;
+      font-weight: bold;
+      color: #cc0000;
+    }
+  </style>
+</head>
+<body>
+<div class="calculator">
+  <h2>Yoji Pricing Calculator</h2>
+
+  <label for="adults">Number of Members (5+ years old):</label>
+  <select id="adults">
+    <option value="0">0</option>
+    <option value="1">1</option>
+    <option value="2">2</option>
+    <option value="3">3</option>
+    <option value="4">4+</option>
+  </select>
+
+  <label for="yoji">Number of Yoji (3–4 years old):</label>
+  <select id="yoji">
+    <option value="0">0</option>
+    <option value="1">1</option>
+    <option value="2">2</option>
+    <option value="3">3</option>
+    <option value="4">4+</option>
+  </select>
+
+  <button onclick="calculate()">Calculate Price</button>
+
+  <h3>Total Monthly Price: <span id="price">£0</span></h3>
+  <div id="helpMessage" class="help-msg" style="display:none;"></div>
+</div>
+
+<script>
+function calculate() {
+  // Convert the select values into either 0..3 or 4 for “4 or more”
+  const adultsVal = parseInt(document.getElementById("adults").value, 10);
+  const yojiVal   = parseInt(document.getElementById("yoji").value, 10);
+
+  // 1) “5+ Only” FTD Pricing:
+  //  index: 0 => £0, 1 => £75, 2 => £125, 3 => £150, 4 => £170
+  const ftdPricing = [0, 75, 125, 150, 170];
+
+  // 2) “Yoji-Only” Pricing:
+  //  index: 0 => £0, 1 => £56, 2 => £96, 3 => £112, 4 => £125
+  const yojiPricing = [0, 56, 96, 112, 125];
+
+  // 3) “Mixed Yoji Contract” Pricing (explicitly from the table)
+  // Format: mixedPricing[adults][yoji]
+  const mixedPricing = {
+    1: {
+      1: 115, // 1 Yoji + 1 older
+      2: 131, // 2 Yoji + 1 older
+      3: 144, // 3 Yoji + 1 older
+    },
+    2: {
+      1: 141, // 1 Yoji + 2 older
+      2: 154, // 2 Yoji + 2 older
+      // 3 Yoji + 2 older => not listed => “Get further help”
+    },
+    3: {
+      1: 163, // 1 Yoji + 3 older
+      // 2 or 3 Yoji + 3 older => not listed => “Get further help”
+    },
+    // 4 older => not explicitly listed for mixing => “Get further help”
+  };
+
+  // Clear any help message and price from previous run
+  const priceOutput = document.getElementById("price");
+  const helpMsg = document.getElementById("helpMessage");
+  helpMsg.style.display = "none";
+  helpMsg.textContent = "";
+  priceOutput.textContent = "£0";
+
+  // Helper function to show “Get further help”
+  function showHelp() {
+    priceOutput.textContent = "N/A";
+    helpMsg.textContent = "Get further help.";
+    helpMsg.style.display = "block";
+  }
+
+  let totalPrice = null; // If we can’t find a table match, we’ll keep it null
+
+  // Case A: Both zero => no members
+  if (adultsVal === 0 && yojiVal === 0) {
+    totalPrice = 0;
+  }
+  // Case B: FTD-only (no Yoji)
+  else if (adultsVal > 0 && yojiVal === 0) {
+    // 4 => index 4 in the array => 4+ is valid for older only
+    totalPrice = ftdPricing[adultsVal];
+  }
+  // Case C: Yoji-only (no 5+)
+  else if (adultsVal === 0 && yojiVal > 0) {
+    // 4 => index 4 => 4+ is valid for Yoji-only
+    totalPrice = yojiPricing[yojiVal];
+  }
+  // Case D: Mixed (adultsVal > 0 && yojiVal > 0)
+  else {
+    // 4+ older in a mixed scenario isn’t in the table => must show “Get further help”
+    if (adultsVal === 4) {
+      totalPrice = null;
+    } 
+    else {
+      // See if there's a mixedPricing entry for the chosen # older
+      const olderGroup = mixedPricing[adultsVal];
+      if (!olderGroup) {
+        // e.g. if adultsVal is 4, or other edge case => no table entry
+        totalPrice = null;
+      } else {
+        // 4+ Yoji in a mixed scenario => not in the table => help
+        if (yojiVal === 4) {
+          totalPrice = null;
+        } else {
+          // Look up the explicit value
+          totalPrice = olderGroup[yojiVal] ?? null;
+        }
+      }
+    }
+  }
+
+  // Display results
+  if (totalPrice === null) {
+    showHelp();
+  } else {
+    priceOutput.textContent = `£${totalPrice}`;
+  }
+}
+</script>
+</body>
+</html>
