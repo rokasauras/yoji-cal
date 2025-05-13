@@ -28,7 +28,7 @@
       padding: 10px; /* Add padding inside elements */
       border: 1px solid #ccc; /* Add a border */
       border-radius: 3px; /* Round corners slightly */
-      box-sizing: border-box;
+      box-sizing: border-box; /* Include padding and border in the element's total width and height */
     }
 
     /* Style for the button */
@@ -75,15 +75,19 @@
     }
 
     /* Optional styling for the canvas element */
-    #pdf-canvas {
-        border: 1px solid #eee; /* Add a light grey border */
+    .page-canvas { /* Use a class as there will be multiple */
+        display: block; /* Ensure canvas is block for max-width to work */
+        max-width: 100%; /* Ensure canvas fits container */
+        height: auto; /* Maintain aspect ratio */
         margin-top: 10px; /* Add space above the canvas */
+        border: 1px solid #eee; /* Add a light grey border */
     }
 
     /* Styling for the download link */
-    #download-link {
+    .download-link { /* Use a class as there will be multiple */
         display: inline-block; /* Make link display as inline-block */
         margin-top: 10px; /* Add space above the link */
+        margin-bottom: 20px; /* Add space below the link before next page/hr */
         padding: 10px 15px; /* Add padding */
         background-color: #28a745; /* Green background color */
         color: white; /* White text color */
@@ -92,7 +96,7 @@
     }
 
     /* Style for the download link on hover */
-    #download-link:hover {
+    .download-link:hover {
         background-color: #218838; /* Darker green background */
     }
 
@@ -133,6 +137,14 @@
     alt="Yoji Pricing Table"
     class="pricing-table-img"
   />
+</div>
+
+<div class="converter-section">
+    <hr />
+    <h3>Convert PDF to PNG</h3>
+    <input type="file" id="pdf-upload" accept="application/pdf" />
+    <div id="canvas-container">
+      </div>
 </div>
 
 <script>
@@ -230,14 +242,6 @@ function calculate() {
 }
 </script>
 
-<div class="converter-section">
-    <hr />
-    <h3>Convert PDF to PNG</h3>
-    <input type="file" id="pdf-upload" accept="application/pdf" />
-    <canvas id="pdf-canvas" style="max-width: 100%; display: none;"></canvas>
-    <a id="download-link" style="display: none;" download="converted.png">Download PNG</a>
-</div>
-
 <script>
   // Specify the worker source for PDF.js
   pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js';
@@ -249,8 +253,14 @@ function calculate() {
     // Check if a file was selected and if it's a PDF
     if (!file || !file.type.includes("pdf")) {
       alert("Please select a PDF file.");
+      // Clear previous results if a non-pdf is selected after one was shown
+      document.getElementById('canvas-container').innerHTML = '';
       return;
     }
+
+    // Get the container for canvases and clear previous results
+    const canvasContainer = document.getElementById('canvas-container');
+    canvasContainer.innerHTML = ''; // Clear any previously rendered pages
 
     // Create a FileReader to read the file content
     const fileReader = new FileReader();
@@ -263,45 +273,52 @@ function calculate() {
       try {
         // Load the PDF document
         const pdf = await pdfjsLib.getDocument({ data: typedarray }).promise;
-        // Get the first page of the PDF
-        const page = await pdf.getPage(1); // Convert only the first page
+        const numPages = pdf.numPages; // Get total number of pages
+        const scale = 2; // Define scale for rendering (higher scale means higher resolution)
 
-        // Define the scale for rendering (higher scale means higher resolution)
-        const scale = 2;
-        // Get the viewport for the page with the specified scale
-        const viewport = page.getViewport({ scale });
+        // Loop through each page
+        for (let pageNumber = 1; pageNumber <= numPages; pageNumber++) {
+          const page = await pdf.getPage(pageNumber); // Get the current page
 
-        // Get the canvas element and its 2D rendering context
-        const canvas = document.getElementById('pdf-canvas');
-        const context = canvas.getContext('2d');
+          // Get the viewport for the page with the specified scale
+          const viewport = page.getViewport({ scale });
 
-        // Set the canvas dimensions to match the viewport dimensions
-        canvas.height = viewport.height;
-        canvas.width = viewport.width;
+          // Create a new canvas element for this page
+          const pageCanvas = document.createElement('canvas');
+          pageCanvas.className = 'page-canvas'; // Add class for styling
 
-        // Render the PDF page onto the canvas
-        await page.render({ canvasContext: context, viewport }).promise;
+          // Set the canvas dimensions to match the viewport dimensions
+          const context = pageCanvas.getContext('2d');
+          pageCanvas.height = viewport.height;
+          pageCanvas.width = viewport.width;
 
-        // Display the canvas and generate the download link
-        canvas.style.display = 'block'; // Show the canvas
-        // Get the image data from the canvas as a PNG data URL
-        const pngData = canvas.toDataURL('image/png');
-        // Get the download link element
-        const downloadLink = document.getElementById('download-link');
-        // Set the download link's href to the PNG data
-        downloadLink.href = pngData;
-        // Show the download link
-        downloadLink.style.display = 'inline-block';
-        // Set the download link text
-        downloadLink.textContent = 'Download PNG';
+          // Render the PDF page onto the new canvas
+          await page.render({ canvasContext: context, viewport }).promise;
+
+          // Create a download link for this page
+          const downloadLink = document.createElement('a');
+          downloadLink.className = 'download-link'; // Add class for styling
+          downloadLink.href = pageCanvas.toDataURL('image/png'); // Get the image data from the canvas
+          downloadLink.download = `converted_page_${pageNumber}.png`; // Set filename
+          downloadLink.textContent = `Download Page ${pageNumber} PNG`; // Set link text
+
+          // Append the canvas and download link to the container
+          canvasContainer.appendChild(pageCanvas);
+          canvasContainer.appendChild(downloadLink);
+
+          // Add a separator after each page (optional, but good for clarity)
+          if (pageNumber < numPages) {
+              const separator = document.createElement('hr');
+              canvasContainer.appendChild(separator);
+          }
+        }
 
       } catch (error) {
         // Handle any errors during PDF conversion
         console.error("Error converting PDF:", error);
         alert("Failed to convert PDF. Please try a different file.");
-        // Hide canvas and link on error
-        document.getElementById('pdf-canvas').style.display = 'none';
-        document.getElementById('download-link').style.display = 'none';
+        // Clear previous results on error
+        canvasContainer.innerHTML = '';
       }
     };
 
