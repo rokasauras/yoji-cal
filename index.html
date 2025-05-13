@@ -4,51 +4,103 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Yoji Pricing Calculator</title>
+
   <style>
     body {
-      font-family: Arial, sans-serif;
-      margin: 20px;
+      font-family: Arial, sans-serif; /* Set default font */
+      margin: 20px; /* Add margin around the content */
     }
+
+    /* Style for the main calculator container */
     .calculator {
-      max-width: 400px;
-      margin: auto;
-      padding: 20px;
-      border: 1px solid #ccc;
-      border-radius: 5px;
-      background: #f9f9f9;
+      max-width: 400px; /* Limit calculator width */
+      margin: auto; /* Center the calculator on the page */
+      padding: 20px; /* Add padding inside the container */
+      border: 1px solid #ccc; /* Add a border */
+      border-radius: 5px; /* Round the corners */
+      background: #f9f9f9; /* Light grey background */
     }
+
+    /* Style for input fields, select dropdowns, and buttons within the calculator */
     input, select, button {
-      width: 100%;
-      margin-bottom: 10px;
-      padding: 10px;
-      border: 1px solid #ccc;
-      border-radius: 3px;
+      width: 100%; /* Make elements take full width */
+      margin-bottom: 10px; /* Add space below elements */
+      padding: 10px; /* Add padding inside elements */
+      border: 1px solid #ccc; /* Add a border */
+      border-radius: 3px; /* Round corners slightly */
     }
+
+    /* Style for the button */
     button {
-      background: #007bff;
-      color: white;
-      border: none;
-      cursor: pointer;
+      background: #007bff; /* Blue background */
+      color: white; /* White text */
+      border: none; /* No border */
+      cursor: pointer; /* Change cursor to pointer on hover */
     }
+
+    /* Style for button on hover */
     button:hover {
-      background: #0056b3;
+      background: #0056b3; /* Darker blue background */
     }
+
+    /* Style for the help message div */
     .help-msg {
-      margin-top: 10px;
-      font-weight: bold;
-      color: #cc0000;
+      margin-top: 10px; /* Add space above the message */
+      font-weight: bold; /* Make text bold */
+      color: #cc0000; /* Red text color */
     }
 
     /* Ensures the image fits neatly within .calculator’s width */
     .pricing-table-img {
-      display: block;
-      max-width: 100%;
-      height: auto;
-      margin: 20px auto 0;
+      display: block; /* Make image a block element */
+      max-width: 100%; /* Ensure image doesn't exceed container width */
+      height: auto; /* Maintain aspect ratio */
+      margin: 20px auto 0; /* Center the image and add margin */
     }
+
+    /* Styling for the PDF to PNG conversion section */
+    .converter-section {
+      max-width: 400px; /* Match calculator width */
+      margin: 20px auto; /* Center and add margin above/below */
+      padding: 20px; /* Add padding */
+      border: 1px solid #ccc; /* Add border */
+      border-radius: 5px; /* Round corners */
+      background: #f9f9f9; /* Light grey background */
+    }
+
+    /* Remove top margin from the section heading */
+    .converter-section h3 {
+        margin-top: 0;
+    }
+
+    /* Optional styling for the canvas element */
+    #pdf-canvas {
+        border: 1px solid #eee; /* Add a light grey border */
+        margin-top: 10px; /* Add space above the canvas */
+    }
+
+    /* Styling for the download link */
+    #download-link {
+        display: inline-block; /* Make link display as inline-block */
+        margin-top: 10px; /* Add space above the link */
+        padding: 10px 15px; /* Add padding */
+        background-color: #28a745; /* Green background color */
+        color: white; /* White text color */
+        text-decoration: none; /* Remove underline */
+        border-radius: 3px; /* Round corners */
+    }
+
+    /* Style for the download link on hover */
+    #download-link:hover {
+        background-color: #218838; /* Darker green background */
+    }
+
   </style>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.min.js"></script>
 </head>
 <body>
+
 <div class="calculator">
   <h2>Yoji Pricing Calculator</h2>
 
@@ -75,17 +127,17 @@
   <h3>Total Monthly Price: <span id="price">£0</span></h3>
   <div id="helpMessage" class="help-msg" style="display:none;"></div>
 
-  <!-- Updated image reference: same directory, same repository -->
-  <img 
-    src="yoji_pricing_table.png" 
-    alt="Yoji Pricing Table" 
-    class="pricing-table-img" 
+  <img
+    src="yoji_pricing_table.png"
+    alt="Yoji Pricing Table"
+    class="pricing-table-img"
   />
 </div>
 
 <script>
+// Function to calculate the total price based on inputs
 function calculate() {
-  // Convert the select values into either 0..3 or 4 for “4 or more”
+  // Get selected values and convert to integers
   const adultsVal = parseInt(document.getElementById("adults").value, 10);
   const yojiVal   = parseInt(document.getElementById("yoji").value, 10);
 
@@ -115,22 +167,25 @@ function calculate() {
     // 4 older => not explicitly listed => “Get further help”
   };
 
-  // Clear any help message and price from previous run
+  // Get elements to display output and messages
   const priceOutput = document.getElementById("price");
   const helpMsg = document.getElementById("helpMessage");
+
+  // Reset previous outputs and messages
   helpMsg.style.display = "none";
   helpMsg.textContent = "";
   priceOutput.textContent = "£0";
 
-  // Helper function to show “Get further help”
+  // Helper function to display the "Get further help" message
   function showHelp() {
     priceOutput.textContent = "N/A";
     helpMsg.textContent = "Get further help.";
     helpMsg.style.display = "block";
   }
 
-  let totalPrice = null; // If we can’t find a table match, we’ll keep it null
+  let totalPrice = null; // Initialize total price
 
+  // Determine pricing based on member counts
   // Case A: Both zero => no members
   if (adultsVal === 0 && yojiVal === 0) {
     totalPrice = 0;
@@ -145,26 +200,27 @@ function calculate() {
   }
   // Case D: Mixed (adultsVal > 0 && yojiVal > 0)
   else {
-    // 4+ older in a mixed scenario => must show “Get further help”
+    // If 4+ older members in a mixed scenario, show help message
     if (adultsVal === 4) {
       totalPrice = null;
     } else {
+      // Look up pricing based on the number of older members
       const olderGroup = mixedPricing[adultsVal];
       if (!olderGroup) {
-        totalPrice = null;
+        totalPrice = null; // No pricing found for this number of older members
       } else {
-        // 4+ Yoji => not in table => help
+        // If 4+ Yoji members in a mixed scenario, show help message
         if (yojiVal === 4) {
           totalPrice = null;
         } else {
-          // Look up the explicit value
+          // Look up the explicit mixed price, default to null if not found
           totalPrice = olderGroup[yojiVal] ?? null;
         }
       }
     }
   }
 
-  // Display results or prompt “Get further help”
+  // Display the calculated price or the help message
   if (totalPrice === null) {
     showHelp();
   } else {
@@ -172,5 +228,86 @@ function calculate() {
   }
 }
 </script>
+
+<div class="converter-section">
+    <hr />
+    <h3>Convert PDF to PNG (First Page)</h3>
+    <input type="file" id="pdf-upload" accept="application/pdf" />
+    <canvas id="pdf-canvas" style="max-width: 100%; display: none;"></canvas>
+    <a id="download-link" style="display: none;" download="converted.png">Download PNG</a>
+</div>
+
+<script>
+  // Specify the worker source for PDF.js
+  pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js';
+
+  // Add event listener to the file input
+  document.getElementById('pdf-upload').addEventListener('change', async function(e) {
+    // Get the selected file
+    const file = e.target.files[0];
+    // Check if a file was selected and if it's a PDF
+    if (!file || !file.type.includes("pdf")) {
+      alert("Please select a PDF file.");
+      return;
+    }
+
+    // Create a FileReader to read the file content
+    const fileReader = new FileReader();
+
+    // Define what happens when the file is loaded
+    fileReader.onload = async function() {
+      // Get the file content as a Uint8Array
+      const typedarray = new Uint8Array(this.result);
+
+      try {
+        // Load the PDF document
+        const pdf = await pdfjsLib.getDocument({ data: typedarray }).promise;
+        // Get the first page of the PDF
+        const page = await pdf.getPage(1); // Convert only the first page
+
+        // Define the scale for rendering (higher scale means higher resolution)
+        const scale = 2;
+        // Get the viewport for the page with the specified scale
+        const viewport = page.getViewport({ scale });
+
+        // Get the canvas element and its 2D rendering context
+        const canvas = document.getElementById('pdf-canvas');
+        const context = canvas.getContext('2d');
+
+        // Set the canvas dimensions to match the viewport dimensions
+        canvas.height = viewport.height;
+        canvas.width = viewport.width;
+
+        // Render the PDF page onto the canvas
+        await page.render({ canvasContext: context, viewport }).promise;
+
+        // Display the canvas and generate the download link
+        canvas.style.display = 'block'; // Show the canvas
+        // Get the image data from the canvas as a PNG data URL
+        const pngData = canvas.toDataURL('image/png');
+        // Get the download link element
+        const downloadLink = document.getElementById('download-link');
+        // Set the download link's href to the PNG data
+        downloadLink.href = pngData;
+        // Show the download link
+        downloadLink.style.display = 'inline-block';
+        // Set the download link text
+        downloadLink.textContent = 'Download PNG';
+
+      } catch (error) {
+        // Handle any errors during PDF conversion
+        console.error("Error converting PDF:", error);
+        alert("Failed to convert PDF. Please try a different file.");
+        // Hide canvas and link on error
+        document.getElementById('pdf-canvas').style.display = 'none';
+        document.getElementById('download-link').style.display = 'none';
+      }
+    };
+
+    // Read the selected file as an ArrayBuffer
+    fileReader.readAsArrayBuffer(file);
+  });
+</script>
+
 </body>
 </html>
